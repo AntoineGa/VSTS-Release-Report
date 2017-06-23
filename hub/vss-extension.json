@@ -1,0 +1,45 @@
+    {
+        "manifestVersion": 1,
+        "id": "avanade-vsts-rr",
+        "version": "0.1.17",
+        "name": "Avanade VSTS Release Report",
+        "description": "Shows release/envrionment/build all the work items linked to those builds.  User can see what aggregation of work items are 'new' into an envrionment.",
+        "publisher": "avanade-oss",
+        "targets": [
+            {
+                "id": "Microsoft.VisualStudio.Services"
+                }
+            ],
+        "icons": {
+            "default": "images/logo.png"
+         },
+        "contributions": [
+            {
+                "id": "avanade-vsts-rr",
+                "type": "ms.vss-web.hub",
+                "description": "Adds the Avanade Release Report hub to the Work hub group.",
+                "targets": [
+                    "ms.vss-work-web.work-hub-group"
+                    ],
+                "properties": {
+                    "name": "Release Report",
+                    "order": 99,
+                    "uri": "avanade-vsts-rr.html"
+                }
+            }
+        ],
+        "scopes": [
+            "vso.work"
+        ],
+        "files": [
+            {
+                "path": "avanade-vsts-rr.html", "addressable": true
+            },
+            {
+                "path": "scripts", "addressable": true
+            },
+            {
+                "path": "images/logo.png", "addressable": true
+            }
+        ]
+    }

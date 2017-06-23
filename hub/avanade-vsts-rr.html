@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Release Notes</title>
+    <script src="scripts/VSS.SDK.min.js"></script>
+    <script src="scripts/angular.min.js"></script>
+    <style>
+    
+        body{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .envStatus{
+            width: 50px;
+            text-align: center;
+        }
+        .deployed {
+            background-color:green;
+        }
+
+        .seoling-rn-table{
+            border: 1px solid black;
+        }
+
+        .seoling-rn-table td{
+           padding: 3px;
+           height: 100%;
+        }
+
+        .seoling-rn-table th{
+           padding: 3px;
+           border-bottom: 1px solid black;
+        }
+
+        .line{
+            width: 50%;
+            height: 100%;
+            border-right: 1px dashed black;
+        }
+
+    </style>
+</head>
+<body>
+    <div ng-app="main" ng-controller="mainCtrl">
+        <script type="text/javascript"></script>
+        <h1>Release Status and Associated Work Items per Build Definition per Envrionment</h1>        
+        
+        <div ng-show="showTokenUpdateDiv">
+            <a href="#" ng-click="showTokenRegDiv = true; showTokenUpdateDiv = false;">update access token</a>
+        </div>
+
+        <div ng-show="showTokenRegDiv">
+            <table>
+                <tr>
+                    <td>Private Access Token</td>
+                    <td><input ng-model="tokenSecretInput" style="width:300px" /></td>
+                    <td><button ng-click="saveTokenData()">Save Token Data</button></td>
+                </tr>
+            </table>            
+        </div>
+
+         <div ng-repeat="bd in buildDefinitions">
+             <h3>{{ bd.name }}</h3>
+            <table class="seoling-rn-table">
+                <tr>
+                    <th>Build No.</th>
+                    <th>Build Definition</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Release</th>
+                    <th ng-repeat="envName in allEnvNames">{{ envName }}</th>
+                    <th>Associated Workitems</th>
+                </tr>
+                <tr ng-repeat="b in builds | filter:{buildDefName:bd.name}">
+                    <td>{{ b.buildNumber }}</td>
+                    <td>{{ b.buildDefName }}</td>
+                    <td>{{ b.status }} - {{ b.result }}</td>
+                    <td>{{ b.queueTime | date : "dd-MMM-yyyy HH:mm" }}</td>                
+                    <td>{{ b.release.id }}</td>
+                    <td ng-repeat="envName in allEnvNames" class="envStatus" ng-class="{deployed: b.release.envData[envName] == 'succeeded'}">
+                        <div ng-class="{line: b.release.envData[envName] != 'succeeded'}">&nbsp;</div>
+                    </td>
+                    <td>
+                        <ul>
+                            <li ng-repeat="wi in b.release.workItems"><a href="{{ url }}/_workitems?id={{ wi.id }}" target="top">{{ wi.id }}</a></li>
+                        </ul>
+                    </td>
+                    
+                </li>
+            </table>
+         </div>
+
+        <script type="text/javascript">
+        
+            VSS.notifyLoadSucceeded();
+
+        </script>
+    </div>
+</body>
+
+<script>
+
+var app = angular.module("main", []);
+
+app.controller("mainCtrl", function($scope, $http) {
+
+    $scope.showTokenUpdateDiv = false;
+    $scope.showTokenRegDiv = false;
+
+    VSS.init();
+    VSS.ready(function () {
+        var vstsContext  = VSS.getWebContext();
+        $scope.url = vstsContext.collection.uri + vstsContext.project.name;
+        $scope.userEmail = vstsContext.user.email;
+
+        VSS.getService(VSS.ServiceIds.ExtensionData).then(function(dataService) {
+            // Get value in user scope
+            dataService.getValue("tokenSecret", {scopeType: "Default"}).then(function(value) {
+                
+                if("undefined" === typeof value) {
+                    console.log("Token Not Set");
+                    $scope.$apply(function(){
+                        $scope.showTokenRegDiv = true;
+                    });
+                    
+                } else {
+                    $scope.tokenSecretInput = value;
+                    console.log("Token Set");
+                    dataService.getValue("tokenUser", {scopeType: "Default"}).then(function(value) {
+                        if(value == $scope.userEmail) {
+                            $scope.$apply(function(){
+                                $scope.showTokenUpdateDiv = true;
+                            });
+                            
+                        }
+                    });
+
+                    $scope.$apply(function(){
+                        $scope.showTokenRegDiv = false;
+                    });
+                    loadVstsData($scope.url, value);
+                }
+
+            });
+        });
+    });
+    
+    $scope.saveTokenData = function() {
+
+        VSS.ready(function () {
+
+            VSS.getService(VSS.ServiceIds.ExtensionData).then(function(dataService) {
+                
+                dataService.setValue("tokenUser", $scope.userEmail, {scopeType: "Default"}).then(function(value) {
+
+                    dataService.setValue("tokenSecret", $scope.tokenSecretInput, {scopeType: "Default"}).then(function(value) {
+
+                        console.log("Token Saved");
+                        $scope.$apply(function(){
+                            $scope.showTokenRegDiv = false;
+                            $scope.showTokenUpdateDiv = true;
+                        });
+                        
+                        loadVstsData($scope.url, value);
+                    });
+                });
+            });
+        });
+    }
+
+    function getReleaseManagementUrl(projectUrl){
+        return projectUrl.replace(".visualstudio.com", ".vsrm.visualstudio.com");
+    }
+    
+    function loadVstsData(projectUrl, tokenSecret) {
+
+        console.log("Loading VSTS Data");
+        $http.defaults.headers.common['Authorization'] = "Basic " + btoa("tokenKey:" + tokenSecret)
+    
+        $scope.allEnvNames = {};
+
+        $http.get(projectUrl + "/_apis/build/definitions")
+        .then(function(response) {
+            $scope.buildDefinitions = angular.fromJson(response.data).value;
+        
+            $http.get(projectUrl + "/_apis/build/builds")
+            .then(function(response) {
+                
+                $scope.builds = angular.fromJson(response.data).value;
+
+                // Copy the build definition name to the object root for filtering
+                $scope.builds.forEach(function(build) {
+                    build.buildDefName = build.definition.name;
+                 });
+                
+                $http.get(getReleaseManagementUrl(projectUrl) + "/_apis/release/releases")
+                .then(function(response) {
+                
+                    $scope.releases = angular.fromJson(response.data).value;
+
+                    $scope.releases.forEach(function(release) {
+                    
+                        $http.get(getReleaseManagementUrl(projectUrl) + "/_apis/release/releases/" + release.id)
+                        .then(function(response) {
+                            release = angular.fromJson(response.data);
+
+                            // Get the full details and copy the build definition name and the build id to the root for filtering
+                            release.buildDefName = release.artifacts[0].definitionReference.definition.name;
+                            release.buildId = release.artifacts[0].definitionReference.version.id;
+
+                            $scope.builds.forEach(function(build) {
+
+                                if(build.id == release.buildId){
+                                    build.release = release;
+                                }
+
+                            });
+
+                            // Get work items associated with the release
+                            $http.get(getReleaseManagementUrl(projectUrl) + "/_apis/release/releases/" + release.id + "/workitems")
+                            .then(function(response) {
+                                release.workItems = angular.fromJson(response.data).value;
+                            });
+
+
+                            // Process envrionments
+                            release.envData = {};
+                            release.environments.forEach(function(environment) {
+                                if(environment.name in $scope.allEnvNames == false) {
+                                    $scope.allEnvNames[environment.name] = environment.name;
+                                }
+                                release.envData[environment.name] = environment.status;
+                            }, this);
+                        });
+                    });
+                });
+            });
+        });
+    }
+});
+
+</script>
+
+
+</html>
