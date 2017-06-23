@@ -1,7 +1,7 @@
     {
         "manifestVersion": 1,
         "id": "avanade-vsts-rr",
-        "version": "0.1.17",
+        "version": "0.1.20",
         "name": "Avanade VSTS Release Report",
         "description": "Shows release/envrionment/build all the work items linked to those builds.  User can see what aggregation of work items are 'new' into an envrionment.",
         "publisher": "avanade-oss",
