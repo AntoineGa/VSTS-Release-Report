@@ -10,3 +10,5 @@ In practice however not every build is deployed to an envrionment.  You may have
 The VSTS Release Report links these two aspects togther to give a consolodated view of each build, where it has been released and the Work Items associated with each Build.
 
 An user of a particular environment can see when a build was last deployed and the aggregation of work items between each deployment.
+
+![VSTS Release Report](docs/VstsRr1.png)
