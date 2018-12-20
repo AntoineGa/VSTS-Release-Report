@@ -43,7 +43,7 @@ This is open source as a good example of a [**VSTS Extension**](https://www.visu
     * Loop though each build obtained in the step at the start and attach the matching release to the root.  This makes the rendering a little easier but probably a little more processing that strictly required.
     * We make the last call to get the Work Items associated with a release and link it back to the release object as an array.  Note here another assumption that we create a release with EVERY build.  Hence we can use the WIs linked to the releases just as we can linked to the builds.  This is usually the case if you've implemented Continuous Integration (CI) and Continuous Delviery (CI).  If you havn't then you should ...
     * Lastly we process the envrionment info on the release (the reason we needed the full object).  We build up the dictionary of Envrionments and record the status for that release.
-* Rednering the object model
+* Rendering the object model
     * The work we did to build an easy object model make rendering a little easier.  We use a simple table.
     * Repeat for each Build Definition
         * Create a table
